@@ -1,5 +1,5 @@
 {
-  "name": "xordata-user-services",
+  "name": "xordata-user",
   "version": "1.0.0",
   "description": "AWS Lambdas For XorData User Services",
   "main": "index.js",

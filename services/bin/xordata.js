@@ -1,7 +1,6 @@
 #!/usr/bin/env node
 
 const cdk = require('aws-cdk-lib');
-const { XordataStack } = require('../lib/xordata-stack');
 const { XordataPipelineStack } = require('../lib/xordata-pipeline-stack');
 
 const app = new cdk.App();

@@ -2,9 +2,11 @@
 
 const cdk = require('aws-cdk-lib');
 const { XordataStack } = require('../lib/xordata-stack');
+const { XordataPipelineStack } = require('../lib/xordata-pipeline-stack');
 
 const app = new cdk.App();
-const stack = new XordataStack(app, 'XordataStack', {
+
+new XordataStack(app, 'XordataStack', {
   /* If you don't specify 'env', this stack will be environment-agnostic.
    * Account/Region-dependent features and context lookups will not work,
    * but a single synthesized template can be deployed anywhere. */
@@ -22,3 +24,13 @@ const stack = new XordataStack(app, 'XordataStack', {
 
   /* For more information, see https://docs.aws.amazon.com/cdk/latest/guide/environments.html */
 });
+
+new XordataPipelineStack(app, 'XordataPipelineStack', {
+  /* Uncomment the next line to specialize this stack for the AWS Account
+   * and Region that are implied by the current CLI configuration. */
+  env: {
+    account: process.env.CDK_DEFAULT_ACCOUNT,
+    region: process.env.CDK_DEFAULT_REGION
+  },
+});
+

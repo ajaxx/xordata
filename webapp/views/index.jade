@@ -1,0 +1,22 @@
+extends layout
+
+block content
+  div(class="container")
+    article(class="message")
+      div(class="message-header")
+        p Welcome To OAuth2 Service Provider Test Page (NON-PRODUCTION)
+      div(class="message-body")
+        div
+          This is a oauth2 service provider test page.  The idea is that we will ask for authorization for a specific scope from an
+          authorization service.  We have run into problems with multiple services, but we've also validated with several oauth2 authorization
+          servers, so we know this does work.  Your service needs to be configured in the service_configuration.json.  In order to do its job,
+          it must first authorize with the authorization service.
+
+    div(class="card")
+      header(class="card-header")
+        p(class="card-header-title")
+          Click "Authorize" button below to initiate the authorization process (You will be redirected to the account management service).
+
+      footer(class="card-footer")
+        div(class="card-footer-item")
+          a(class="button is-primary auth-url", href="/authorize") Authorize

@@ -1,0 +1,22 @@
+{
+  "name": "xordata-aws-common",
+  "version": "1.0.0",
+  "description": "Common library infrastructure for lambdas",
+  "main": "index.js",
+  "scripts": {
+    "test": "jest"
+  },
+  "author": "",
+  "license": "ISC",
+  "publishConfig": {
+    "registry": "http://localhost:4873"
+  },
+  "dependencies": {
+    "aws-sdk": "^2.953.0",
+    "uuid": "^8.3.2"
+  },
+  "devDependencies": {
+    "xordata-aws-common-test": "^1.0.1",
+    "chai": "^4.3.4"
+  }
+}

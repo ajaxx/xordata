@@ -10,6 +10,7 @@ const cognito = require('aws-cdk-lib/aws-cognito');
 const { BlockPublicAccess } = require('aws-cdk-lib/aws-s3');
 const { RemovalPolicy } = require('aws-cdk-lib');
 const { LambdaIntegration } = require('aws-cdk-lib/aws-apigateway');
+const { PolicyStatement } = require('aws-cdk-lib/aws-iam');
 
 class XordataStack extends cdk.Stack {
   /**
@@ -32,8 +33,6 @@ class XordataStack extends cdk.Stack {
     this.createDataIndices();
 
     // lambda assets
-    this.createLambdaAsset();
-    this.createLambdaExecutionRole();
     this.createLambdaFunctions();
 
     // API gateway
@@ -41,28 +40,12 @@ class XordataStack extends cdk.Stack {
   }
 
   /**
-   * Create the execution role for the lambda functions
-   */
-
-  createLambdaExecutionRole() {
-    this.appExecutionRole = new iam.Role(this, 'Execution Role', {
-      assumedBy: new iam.ServicePrincipal('dynamodb.amazonaws.com')
-    });
-  }
-
-  /**
-   * Create the lambda code asset.  This defines where the code will come from when executing.
-   */
-
-  createLambdaAsset() {
-    this.lambdaAsset = lambda.Code.fromAsset(path.join(__dirname, '..', 'users'));
-  }
-
-  /**
-   * Create the lambda functions themselves.
+   * Create the lambda functions
    */
 
   createLambdaFunctions() {
+    this.lambdaAsset = lambda.Code.fromAsset(path.join(__dirname, '..', 'users'));
+
     this.userLambdaFunction = new lambda.Function(this, 'User.Handler', {
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'user.handler',

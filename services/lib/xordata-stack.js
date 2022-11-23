@@ -11,6 +11,7 @@ const { BlockPublicAccess } = require('aws-cdk-lib/aws-s3');
 const { RemovalPolicy } = require('aws-cdk-lib');
 const { LambdaIntegration } = require('aws-cdk-lib/aws-apigateway');
 const { PolicyStatement } = require('aws-cdk-lib/aws-iam');
+const { Tracing } = require('aws-cdk-lib/aws-lambda');
 
 class XordataStack extends cdk.Stack {
   /**
@@ -46,11 +47,11 @@ class XordataStack extends cdk.Stack {
   createLambdaFunctions() {
     this.lambdaAsset = lambda.Code.fromAsset(path.join(__dirname, '..', 'users'));
 
-    this.userLambdaFunction = new lambda.Function(this, 'User.Handler', {
+    this.userLambdaFunction = new lambda.Function(this, 'UserHandler', {
       runtime: lambda.Runtime.NODEJS_18_X,
       handler: 'user.handler',
       code: this.lambdaAsset,
-      role: this.appExecutionRole
+      tracing: Tracing.ACTIVE
     });
   }
 

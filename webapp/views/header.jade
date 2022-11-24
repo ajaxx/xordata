@@ -1,0 +1,49 @@
+nav(class="navbar" role="navigation" aria-label="main navigation")
+  div(class="navbar-brand")
+    a(class="navbar-item" href="/" style="font-size:1.2rem; font-weight: 400; text-transform: lowercase;")
+      img(src="images/exchange-icon.jpg" style="margin-right: 0.25rem;")
+      span() Xor
+      span() Data
+      span(style="margin-left: 0.5rem; text-transform: lowercase; font-size: 0.8rem;") (A secure data exchange)
+    a(class="navbar-burger" aria-label="menu" aria-expanded="false" data-target="navbar-main")
+      span(aria-hidden="true")
+      span(aria-hidden="true")
+      span(aria-hidden="true")
+  div(class="navbar-menu" id="navbar-main")
+    div(class="navbar-start")
+      a(class="navbar-item")
+        Home
+      a(class="navbar-item")
+        Documentation
+    div(class="navbar-end")
+      if userProfile
+        div.navbar-item
+            .dropdown
+                .dropdown-trigger
+                    button.button(aria-haspopup='true' aria-controls='dropdown-menu')
+                        span Hello, #{userProfile.user}
+                        span.icon.is-small
+                            i.fas.fa-angle-down(aria-hidden='true')
+                #dropdown-menu.dropdown-menu(role='menu')
+                    .dropdown-content
+                        a.dropdown-item(href='/profile')
+                            span.icon.is-small
+                              i.fas.fa-regular.fa-id-card(aria-hidden='true')
+                            span.ml-2 Profile
+                        a.dropdown-item(href='/approvals')
+                            span.icon.is-small
+                              i.fas.fa-regular.fa-inbox(aria-hidden='true')
+                            span.ml-2 Approvals
+                        a.dropdown-item(href='/documents')
+                            span.icon.is-small
+                              i.fas.fa-regular.fa-book-medical(aria-hidden='true')
+                            span.ml-2 Documents
+                        hr.dropdown-divider
+                        a.dropdown-item(href='/signout')
+                            span.icon.is-small
+                              i.fas.fa-regular.fa-right-from-bracket(aria-hidden='true')
+                            span.ml-2 Sign Out
+      else
+        div.navbar-item
+          a.is-primary(href="/signin")
+            strong() Hello, sign in

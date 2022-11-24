@@ -1,9 +1,15 @@
-var express = require('express');
-var router = express.Router();
+const express = require('express');
+const router = express.Router();
+const debug = require('debug')('xordata:pages:index');
 
 /* GET home page. */
 router.get('/', function(req, res, next) {
-  res.render('index', { title: 'Express' });
+  // See if we have a session
+  if (req.userProfile !== undefined) {
+    res.render('index', { userProfile: req.userProfile, session: req.session });
+  } else {
+    res.render('index', { })
+  }
 });
 
 module.exports = router;

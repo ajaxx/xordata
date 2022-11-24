@@ -1,0 +1,23 @@
+extends layout
+
+block content
+  include header.jade
+  section(class="section")
+    .card
+      .card-content
+        .field
+          label.label Username
+          .control.has-icons-left
+            input.input(type='text' readonly value='#{userProfile.user}')
+            span.icon.is-small.is-left
+              i.fas.fa-user
+        .field
+          label.label Name
+          .control
+            input.input(type='text' readonly value='#{userProfile.display_name}')
+        .field
+          label.label Email
+          .control.has-icons-left
+            input.input(type='email' readonly value='#{userProfile.email}')
+            span.icon.is-small.is-left
+              i.fas.fa-envelope

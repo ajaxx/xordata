@@ -1,8 +1,10 @@
 "use strict";
 
-const BaseDAO = require('./base').BaseDAO;
-const dao_validation = require('./validation');
-const debug = require('debug')('xordata:dao:user-profile');
+const DynamoDAO = require('./base_dynamodb');
+const validation = require('./validation');
+const debug = require('debug')('xordata:model:user-profile');
+
+console.log(DynamoDAO);
 
 const defaultTableName = 'XorData-UserProfile';
 
@@ -10,15 +12,15 @@ function itemToUserProfile(itemData) {
     debug(`converting ${itemData}`);
 
     return {
-        uid: dao_validation.requiredString(itemData, 'uid'),
-        user: dao_validation.requiredString(itemData, 'user'),
-        email: dao_validation.requiredString(itemData, 'email'),
-        display_name: dao_validation.optionalString(itemData, 'display_name') || '',
-        timestamp: dao_validation.requiredString(itemData, 'timestamp')
+        uid: validation.requiredString(itemData, 'uid'),
+        user: validation.requiredString(itemData, 'user'),
+        email: validation.requiredString(itemData, 'email'),
+        display_name: validation.optionalString(itemData, 'display_name') || '',
+        timestamp: validation.requiredString(itemData, 'timestamp')
     };
 }
 
-/* export */ class UserProfileDAO extends BaseDAO {
+/* export */ class UserProfileDAO extends DynamoDAO {
     constructor(configuration) {
         super(configuration, defaultTableName);
     }
@@ -103,18 +105,9 @@ function itemToUserProfile(itemData) {
     }
 }
 
-exports.UserProfileDAO = UserProfileDAO;
-exports.Singleton = (function(){
-    var instance;
-    return {
-        setInstance : function(value) {
-            instance = value;
-        },
-        getInstance : function(){
-            if(!instance) {  // check already exists
-                instance = new UserProfileDAO();
-            }
-            return instance;
-        }
-    }
-})();
+const Singleton = new UserProfileDAO();
+
+module.exports = {
+    UserProfileDAO : UserProfileDAO,
+    Singleton : Singleton
+};

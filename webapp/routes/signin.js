@@ -1,4 +1,4 @@
-const config = require('../config');
+const config = require('../config')['cognito'];
 const express = require('express');
 const router = express.Router();
 

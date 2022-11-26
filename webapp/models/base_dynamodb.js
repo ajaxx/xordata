@@ -1,6 +1,6 @@
 const db = require('../db');
 
-class BaseDAO {
+class DynamoDAO {
     constructor(configuration, defaultTableName) {
         if (configuration !== undefined) {
             this.dynamodb = configuration.dynamodb;
@@ -19,4 +19,4 @@ class BaseDAO {
     }
 }
 
-exports.BaseDAO = BaseDAO;
+module.exports = DynamoDAO;

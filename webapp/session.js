@@ -1,7 +1,8 @@
 const debug = require('debug')('xordata:session');
-const config = require('./config');
-const userProfiles = require('./dao/user-profile');
+const config = require('./config')['cognito'];
 const jwt = require('jsonwebtoken');
+
+const UserProfiles = require('./models/user_profile_model').Singleton;
 
 function decodeAndVerifySessionToken(sessionToken) {
     return new Promise((resolve, reject) => {
@@ -20,7 +21,7 @@ module.exports = function (req, res, next) {
         decodeAndVerifySessionToken(req.cookies.session_token)
             .then((session) => {
                 debug('searching DAO for user id');
-                userProfiles.Singleton.getInstance()
+                UserProfiles
                     .get(session.uid)
                     .then(userProfile => {
                         req.session = session

@@ -5,6 +5,7 @@
   "private": true,
   "scripts": {
     "start": "node ./bin/www",
+    "debug": "set DEBUG=* && npm start",
     "test": "run test"
   },
   "repository": {
@@ -16,12 +17,26 @@
     "url": "https://github.com/ajaxx/xordata/issues"
   },
   "homepage": "https://github.com/ajaxx/xordata#readme",
+  "engines": {
+    "node": ">=11"
+  },
   "dependencies": {
+    "@aws-sdk/client-s3": "^3.216.0",
+    "aws-sdk": "^2.1261.0",
+    "cognito-express": "^3.0.1",
     "cookie-parser": "~1.4.4",
     "debug": "~2.6.9",
     "express": "~4.16.1",
+    "formidable": "^2.0.1",
     "http-errors": "~1.6.3",
-    "jade": "~1.11.0",
+    "jade": "^1.9.2",
+    "jsonwebtoken": "^8.5.1",
+    "jwks-rsa": "^3.0.0",
     "morgan": "~1.9.1"
+  },
+  "devDependencies": {
+    "express-reload": "^1.2.0",
+    "nodemon": "^2.0.20",
+    "react-jsx": "^1.0.0"
   }
 }

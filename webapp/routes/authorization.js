@@ -1,10 +1,10 @@
-const config = require('../config');
+const config = require('../config')['cognito'];
 const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const jwksClient = require('jwks-rsa');
-const userProfileDAO = require('../dao/user-profile');
+const userProfileDAO = require('../models/user_profile_model');
 
 const debug = require('debug')('xordata:authorization');
 

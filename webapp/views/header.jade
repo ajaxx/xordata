@@ -1,7 +1,7 @@
 nav(class="navbar" role="navigation" aria-label="main navigation")
   div(class="navbar-brand")
     a(class="navbar-item" href="/" style="font-size:1.2rem; font-weight: 400; text-transform: lowercase;")
-      img(src="images/exchange-icon.jpg" style="margin-right: 0.25rem;")
+      img(src="/images/exchange-icon.jpg" style="margin-right: 0.25rem;")
       span() Xor
       span() Data
       span(style="margin-left: 0.5rem; text-transform: lowercase; font-size: 0.8rem;") (A secure data exchange)
@@ -30,6 +30,10 @@ nav(class="navbar" role="navigation" aria-label="main navigation")
                             span.icon.is-small
                               i.fas.fa-regular.fa-id-card(aria-hidden='true')
                             span.ml-2 Profile
+                        a.dropdown-item(href='/keys')
+                            span.icon.is-small
+                              i.fas.fa-regular.fa-key(aria-hidden='true')
+                            span.ml-2 Keys
                         a.dropdown-item(href='/approvals')
                             span.icon.is-small
                               i.fas.fa-regular.fa-inbox(aria-hidden='true')

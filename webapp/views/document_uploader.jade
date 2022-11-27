@@ -1,0 +1,7 @@
+extends layout
+
+block content
+  include header.jade
+  .box(id='document-signer', data-section='#{section}')
+
+  script(src="/lib/openpgp.min.js")

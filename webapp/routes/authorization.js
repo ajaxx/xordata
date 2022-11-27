@@ -4,7 +4,7 @@ const router = express.Router();
 const axios = require('axios');
 const jwt = require('jsonwebtoken');
 const jwksClient = require('jwks-rsa');
-const userProfileDAO = require('../models/user_profile_model');
+const UserProfileModel = require('../models/model_user_profile').Singleton;
 
 const debug = require('debug')('xordata:authorization');
 
@@ -81,7 +81,7 @@ router.get('/', function(req, res, next) {
           const userToken = createUserToken(decodedToken);
 
           // create the user profile if it does not already exist
-          userProfileDAO.Singleton.getInstance().getOrCreate(decodedToken.sub, function() {
+          UserProfileModel.getOrCreate(decodedToken.sub, function() {
             debug('generating user profile data');
             return {
               'uid': decodedToken.sub,

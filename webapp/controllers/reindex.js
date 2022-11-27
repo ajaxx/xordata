@@ -2,9 +2,9 @@ const crypto = require('crypto');
 const EventEmitter = require('events');
 const debug = require('debug')('xordata:controller:documents');
 // DAO for documents
-const DocumentModel = require('../models/document_model').Singleton;
+const DocumentModel = require('../models/model_document').Singleton;
 // DAO for document indices
-const DocumentIndexDAO = require('../models/document_index_model')
+const DocumentIndexDAO = require('../models/model_keys')
 
 module.exports = function(uid, options) {
     return new Promise((resolve, reject) => {

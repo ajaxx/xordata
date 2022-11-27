@@ -1,20 +1,31 @@
 const express = require('express');
 const router = express.Router();
 const debug = require('debug')('xordata:page:documents');
+const sections = require('../models/model_sections');
 
-let sections = [
-  { 'key' : 'patient', 'title': 'Patient', 'icon': 'fa-hospital-user' },
-  { 'key' : 'procedures', 'title': 'Procedures', 'icon': 'fa-heart-pulse' },
-  { 'key' : 'medication', 'title': 'Medication', 'icon': 'fa-prescription' },
-  { 'key' : 'questions', 'title': 'Questions & Answers', 'icon': 'fa-clipboard-question'},
-  { 'key' : 'service_requests', 'title': 'Service Requests', 'icon': 'fa-book-medical'}
-];
+router.use(require('../auth_jwt'));
+router.use(function (req, res, next) {
+  debug('api call invoked');
+  if (!req.userProfile) {
+    res.status(401).end();
+  } else {
+    next();
+  }
+});
 
 router.get('/', (req, res) => {
-  if (req.userProfile !== undefined) {
-    res.render('documents', { userProfile: req.userProfile, sections: sections });
+  res.render('documents', { userProfile: req.userProfile });
+});
+
+router.get('/upload', (req, res) => {
+  const section = req.query.section;
+  if (section && sections.isSection(section)) {
+    res.render('document_uploader', {
+      userProfile: req.userProfile,
+      section: section
+    });
   } else {
-    res.redirect('/');
+    res.sendStatus(400);
   }
 });
 

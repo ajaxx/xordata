@@ -16,7 +16,7 @@ class S3DAO {
 
     async client() {
         if (this.s3client === undefined) {
-            this.s3client = new S3Client({ region: config.dynamodb.region });
+            this.s3client = new S3Client({ region: config.s3.region });
         }
         return this.s3client;
     }

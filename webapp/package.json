@@ -21,7 +21,9 @@
     "node": ">=11"
   },
   "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.216.0",
     "@aws-sdk/client-s3": "^3.216.0",
+    "aes-js": "^3.1.2",
     "aws-sdk": "^2.1261.0",
     "cognito-express": "^3.0.1",
     "cookie-parser": "~1.4.4",
@@ -32,7 +34,8 @@
     "jade": "^1.9.2",
     "jsonwebtoken": "^8.5.1",
     "jwks-rsa": "^3.0.0",
-    "morgan": "~1.9.1"
+    "morgan": "~1.9.1",
+    "openpgp": "^5.5.0"
   },
   "devDependencies": {
     "express-reload": "^1.2.0",

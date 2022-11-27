@@ -1,0 +1,15 @@
+extends layout
+
+block content
+  include header.jade
+  section(class="section")
+    .card
+      .card-header
+        p.card-header-title GPG Keys
+      .card-content(id='key-list')       
+      .card-footer 
+        .card-footer-item
+          p
+            | This is a list of GPG keys associated with your account. Remove any keys that you do not recognize.
+        
+        

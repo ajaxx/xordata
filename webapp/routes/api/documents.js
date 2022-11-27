@@ -1,14 +1,14 @@
 const express = require('express');
 const router = express.Router();
 const formidable = require('formidable');
-const sections = require('../../models/sections_model');
 const fs = require('fs');
 const debug = require('debug')('xordata:page:documents');
 const uuid = require('uuid');
 
 const controller_reindex = require('../../controllers/reindex');
 
-const DocumentModel = require('../../models/document_model').Singleton;
+const DocumentModel = require('../../models/model_document').Singleton;
+const sections = require('../../models/model_sections');
 
 /**
  * Returns the documents visible to this user.
@@ -27,7 +27,7 @@ router.get('/', (req, res, next) => {
         .catch(error => next(error));
 });
 
-router.post('/', (req, res, next) => {
+router.post('/old', (req, res, next) => {
     debug('post request incoming');
 
     const uid = req.userProfile.uid;
@@ -74,6 +74,32 @@ router.post('/', (req, res, next) => {
             res.json({ id : id, status : 'complete' });
         });
     });
+});
+
+// Registers a (new) document with the service
+router.post('/', express.json(), (req, res, next) => {
+    // Construct the entity to be passed to the model
+    const document = {
+        uid: req.userProfile.uid,
+        section: req.body.section,
+        message: req.body.message,
+        signature: req.body.signature
+    }
+
+    if (document.section && document.message && document.signature) {
+        DocumentModel
+            .put(document)
+            .then(result => res.json(result))
+            .catch(error => next(error));
+    } else {
+        res.sendStatus(400);
+    }
+});
+
+router.delete('/:docId', (req, res, next) => {
+    DocumentModel
+        .delete(req.userProfile.uid, req.params.docId)
+        .catch(error => next(error));
 });
 
 /**

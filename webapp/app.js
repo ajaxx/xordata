@@ -4,7 +4,7 @@ const path = require('path');
 const cookieParser = require('cookie-parser');
 const logger = require('morgan');
 
-const sessionHandler = require('./session');
+const sessionHandler = require('./auth_jwt');
 
 const app = express();
 
@@ -23,6 +23,7 @@ app.use('/', require('./routes/index'));
 app.use('/api', require('./routes/api'));
 app.use('/users', require('./routes/users'));
 app.use('/profile', require('./routes/profile'));
+app.use('/keys', require('./routes/keys'));
 app.use('/documents', require('./routes/documents'));
 app.use('/authorization', require('./routes/authorization'));
 app.use('/signin', require('./routes/signin'));

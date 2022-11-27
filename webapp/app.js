@@ -25,6 +25,7 @@ app.use('/users', require('./routes/users'));
 app.use('/profile', require('./routes/profile'));
 app.use('/keys', require('./routes/keys'));
 app.use('/documents', require('./routes/documents'));
+app.use('/connections', require('./routes/connections'));
 app.use('/authorization', require('./routes/authorization'));
 app.use('/signin', require('./routes/signin'));
 app.use('/signout', require('./routes/signout'));

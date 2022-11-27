@@ -76,6 +76,13 @@ router.delete('/:docId', (req, res, next) => {
         .catch(error => next(error));
 });
 
+router.get('/access/:docId', (req, res, next) => {
+    DocumentModel
+        .delete(req.userProfile.uid, req.params.docId)
+        .catch(error => next(error));
+});
+
+
 /**
  * Reindexes the documents for this user
  */

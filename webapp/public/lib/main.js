@@ -50,7 +50,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         ),
                         React.createElement('div', { className: 'field' },
                             React.createElement('label', { className: 'label' }, 'Public Key'),
-                            React.createElement('textarea', { className: 'input', readOnly: true, rows: 6, value: key.key })
+                            React.createElement('textarea', { className: 'textarea', readOnly: true, rows: 6, value: key.key })
                         )
                     )
                 ),
@@ -66,9 +66,82 @@ document.addEventListener('DOMContentLoaded', function () {
             super(props);
             this.state = {
                 error: null,
+                message: null,
                 isLoaded: false,
-                pkeys: []
+                isGenerating: false,
+                pkeys: [],
+                gkey: null
             }
+
+            this.onRequestGenerateKey = this.onRequestGenerateKey.bind(this);
+            this.onRequestSaveKey = this.onRequestSaveKey.bind(this);
+            this.onCopyPrivateKey = this.onCopyPrivateKey.bind(this);
+            this.onCopyPublicKey = this.onCopyPublicKey.bind(this);
+        }
+
+        onCopyPrivateKey(e) {
+            navigator.clipboard.writeText(this.state.gkey.privateKey);
+        }
+
+        onCopyPublicKey(e) {
+            navigator.clipboard.writeText(this.state.gkey.publicKey);
+        }
+
+        onRequestSaveKey(e) {
+            this.setState({ isLoading: true });
+
+            const body = { publicKey: this.state.gkey.publicKey };
+            const options = {
+                headers: {
+                    'Accept': 'application/json',
+                    'Content-Type': 'application/json'
+                }
+            };
+
+            axios
+                .post('/api/keys', body, options)
+                .then(response => {
+                    this.setState({
+                        isLoading: false,
+                        gkey: null,
+                        message: 'Your new key has been saved'
+                    });
+                    this.componentDidMount();
+                })
+                .catch(error => {
+                    console.log(error);
+                    this.setState({
+                        isLoading: false,
+                        error: error
+                    });
+                });
+        }
+
+        onRequestGenerateKey(e) {
+            this.setState({ isGenerating: true });
+            axios
+                .post('/api/keys/keypair', {}, {
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => {
+                    this.setState({
+                        isGenerating: false,
+                        gkey: { 
+                            publicKey: response.data.publicKey,
+                            privateKey: response.data.privateKey
+                        }
+                    });
+                })
+                .catch(error => {
+                    console.log(error);
+                    this.setState({
+                        isGenerating: false,
+                        error: error
+                    });
+                });
         }
 
         componentDidMount() {
@@ -91,9 +164,57 @@ document.addEventListener('DOMContentLoaded', function () {
             return React.createElement('div', null, 'Loading ...');
         }
 
+        renderKeyGeneration() {
+            const buttonClassName = this.state.isGenerating ? 'is-loading' : 'is-primary';
+            if (this.state.gkey) {
+                return React.createElement('div', null,
+                    React.createElement("div", { className: "field" },
+                        React.createElement("label", { className: "label" },
+                            React.createElement("div", { className: 'level' },
+                                React.createElement("span", { className: 'mr-3' }, "Private Key"),
+                                React.createElement("a", { className: 'button', onClick: this.onCopyPrivateKey },
+                                    React.createElement("span", { className: "icon is-small" },
+                                        React.createElement("i", { className: "fa-solid fa-copy" })
+                                    ),
+                                )
+                            )
+                        ),
+                        React.createElement("textarea", { className: "textarea", readOnly: true, value: this.state.gkey.privateKey, rows: 10 })
+                    ),
+                    React.createElement("div", { className: "field" },
+                        React.createElement("label", { className: "label" },
+                            React.createElement("div", { className: 'level' },
+                                React.createElement("span", { className: 'mr-3' }, "Public Key"),
+                                React.createElement("a", { className: 'button', onClick: this.onCopyPublicKey },
+                                    React.createElement("span", { className: "icon is-small" },
+                                        React.createElement("i", { className: "fa-solid fa-copy" })
+                                    ),
+                                )
+                            )
+                        ),
+                        React.createElement("div", { className: "control" },
+                            React.createElement("textarea", { className: "textarea", readOnly: true, value: this.state.gkey.publicKey, rows: 10 })
+                        )
+                    ),
+                    React.createElement('div', { className: 'buttons' },
+                        React.createElement('button', { className: `button ${buttonClassName}`, onClick: this.onRequestGenerateKey }, "Generate (New) Key"),
+                        React.createElement('button', { className: `button ml-5 ${buttonClassName}`, onClick: this.onRequestSaveKey }, "Save (Public Key Only)")
+                    )
+                );
+            } else {
+                return React.createElement('div', null,
+                    React.createElement('div', { className: 'has-info-light mb-4' }, 'You currently have no keys.'),
+                    React.createElement('button', { className: `button ${buttonClassName}`, onClick: this.onRequestGenerateKey }, "Generate Key"));
+            }
+        }
+
         renderKeys(pkeys) {
-            return React.createElement('div', { className: 'columns is-multiline' },
-                pkeys.map(key => React.createElement(KeyTile, { pkey: key, key: key.kid })));
+            if (pkeys.length != 0) {
+                return React.createElement('div', { className: 'columns is-multiline' },
+                    pkeys.map(key => React.createElement(KeyTile, { pkey: key, key: key.kid })));
+            } else {
+                return this.renderKeyGeneration();
+            }
         }
 
         render() {
@@ -421,7 +542,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     ),
                     React.createElement("div", { className: "field" },
                         React.createElement("label", { className: "label" }, "Signature"),
-                        React.createElement("textarea", { id: "document-signature", className: "input", readOnly: true, value: signature, rows: 10 })
+                        React.createElement("textarea", { id: "document-signature", className: "textarea", readOnly: true, value: signature, rows: 10 })
                     ),
                     this.renderButtons()
                 )
@@ -441,12 +562,40 @@ document.addEventListener('DOMContentLoaded', function () {
     // DocumentReview
     // --------------------------------------------------------------------------------
 
+    class DocumentReviewAccess extends React.Component {
+        constructor(props) {
+            super(props);
+            this.state = {
+                access: null
+            }
+        }
+
+        componentDidMount() {
+            const oid = this.props.document.oid;
+            fetch(`/api/documents/access/${oid}`)
+                .then(res => res.json())
+                .then(res => {
+                    this.setState({ access: res.access });
+                }, (error) => {
+                    this.setState({ error: error });
+                });
+        }
+
+        render() {
+            const oid = this.props.document.oid;
+            return React.createElement("div", { className: "columns" },
+                React.createElement("div", { className: "column is-half" },
+                )
+            );
+        }
+    }
     class DocumentReview extends React.Component {
         constructor(props) {
             super(props);
             this.state = {
                 activeTab: 'properties',
-                document: null
+                document: null,
+                documentAccess: null
             }
 
             this.onSelectProperties = this.onSelectProperties.bind(this);
@@ -565,16 +714,6 @@ document.addEventListener('DOMContentLoaded', function () {
             );
         }
 
-        renderContentAccess() {
-            const oid = this.state.document.oid;
-            const description = this.state.document.description;
-            const section = this.state.document.section;
-
-            return React.createElement("div", { className: "columns" },
-                React.createElement("div", { className: "column is-half" },
-                )
-            );
-        }
 
         renderContentAudit() {
             const oid = this.state.document.oid;
@@ -592,7 +731,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 if (this.state.activeTab == 'properties') {
                     return this.renderContentProperties();
                 } else if (this.state.activeTab == 'access') {
-                    return this.renderContentAccess();
+                    return React.createElement(DocumentReviewAccess, { document: this.state.document });
                 } else if (this.state.activeTab == 'audit') {
                     return this.renderContentAudit();
                 }

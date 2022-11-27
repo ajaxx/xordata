@@ -1,0 +1,43 @@
+extends layout
+
+block content
+  include header.jade
+  .tiles 
+    .tile
+      .box
+        table.table
+          thead 
+            tr 
+              th Timestamp 
+              th Counterparty
+              th Status
+          tbody
+            each relationship in relationships
+              tr 
+                td #{relationship.timestamp}
+                td
+                  a.mr-1(href='/profile/view/#{relationship.dst_uid}')
+                    span.icon.is-small
+                      i.fas.fa-regular.fa-id-card(aria-hidden='true')
+                  span #{relationship.dst_uid}
+                td
+                  if relationship.status == 'requested'
+                    .has-text-info
+                      | Pending (Requested)
+                  else if relationship.status == 'pending'
+                    .has-text-info
+                      | Pending (Incoming)
+                    .buttons.mt-5
+                      a.button.is-primary
+                        span Approve
+                      a.button.is-primary
+                        span Decline
+                  else if relationship.status == 'decliner'
+                    .has-text-warning-dark
+                      | You declined their request to connect
+                  else if relationship.status == 'declined'
+                    .has-text-warning-dark
+                      | Declined your request to connect
+                  else if relationship.status == 'connected'
+                    .has-text-info
+                      | Connected

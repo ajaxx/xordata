@@ -29,4 +29,9 @@ router.get('/upload', (req, res) => {
   }
 });
 
+router.get('/:documentId', (req, res) => {
+  const documentId = req.params.documentId;
+  res.render('document_properties', { userProfile: req.userProfile, documentId: documentId });
+});
+
 module.exports = router;

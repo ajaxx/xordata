@@ -8,6 +8,7 @@ const uuid = require('uuid');
 const controller_reindex = require('../../controllers/reindex');
 
 const DocumentModel = require('../../models/model_document').Singleton;
+const DocumentIndexModel = require('../../models/model_document_index').Singleton;
 const sections = require('../../models/model_sections');
 
 /**
@@ -17,63 +18,21 @@ router.get('/', (req, res, next) => {
     // Access the provided section and limit query parameters
     const section = req.query.section;
     const uid = req.userProfile.uid;
-    const limit = req.query.limit || 100;
 
-    DocumentModel
+    DocumentIndexModel
         .findAll(uid, section)
-        .then((documents) => {
-            res.json(documents);
-        })
+        .then(documents => res.json({ documents: documents }))
         .catch(error => next(error));
 });
 
-router.post('/old', (req, res, next) => {
-    debug('post request incoming');
-
+router.get('/:documentId', (req, res, next) => {
     const uid = req.userProfile.uid;
+    const oid = req.params.documentId;
 
-    const form = formidable();
-    form.uploadDir = `./uploads/`;
-    form.keepExtensions = false;
-    form.multiples = false;
-
-    form.parse(req, (err, fields, files) => {
-        if (err) {
-            next(err);
-            return;
-        }
-
-        const section = fields['section'];
-        if (!sections.isSection(section)) {
-            res.status(400);
-            return;
-        }
-
-        if (!('dataFile' in files)) {
-            res.status(400);
-            return;
-        }
-
-        const file = files['dataFile'];
-        const pathToFile = file.filepath;
-        fs.readFile(pathToFile, 'utf8', function(err, data) {
-            // send the file to s3
-            if (err) {
-                next(err);
-                return;
-            }
-
-            const id = uuid.v4();
-            DocumentModel.put({
-                id: id,
-                uid: uid,
-                section: section,
-                content: data
-            });
-
-            res.json({ id : id, status : 'complete' });
-        });
-    });
+    DocumentIndexModel
+        .get(uid, oid)
+        .then(document => res.json({ document: document }))
+        .catch(error => next(error));
 });
 
 // Registers a (new) document with the service
@@ -83,13 +42,28 @@ router.post('/', express.json(), (req, res, next) => {
         uid: req.userProfile.uid,
         section: req.body.section,
         message: req.body.message,
-        signature: req.body.signature
+        signature: req.body.signature,
+        description: req.body.description
     }
 
-    if (document.section && document.message && document.signature) {
+    if (document.section && 
+        document.message && 
+        document.signature &&
+        document.description) {
         DocumentModel
             .put(document)
-            .then(result => res.json(result))
+            .then(async result => {
+                const index = {
+                    oid: result.id,
+                    uid: req.userProfile.uid,
+                    section: req.body.section,
+                    description: req.body.description,
+                    timestamp: result.timestamp
+                };
+
+                await DocumentIndexModel.put(index);
+                return res.json(result);
+            })
             .catch(error => next(error));
     } else {
         res.sendStatus(400);

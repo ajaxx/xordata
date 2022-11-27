@@ -9,6 +9,7 @@ const crypto = require('crypto');
 
 const { EventEmitter } = require('events');
 const { PutObjectCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
+const { resourceLimits } = require('worker_threads');
 
 const Keys = require('./model_keys').Singleton;
 
@@ -133,7 +134,7 @@ const defaultBucketName = 'xordata';
     }
 
     async scan(uid, section, eventEmitter) {
-        const s3client = await this.client();
+        const client = await this.client();
         
         let isTruncated = true;
         let iterations = 0;
@@ -156,14 +157,17 @@ const defaultBucketName = 'xordata';
 
             debug(`sending command to s3`);
             const command = new ListObjectsV2Command(params);
-            const result = await s3client.send(command);
+            const result = await client.send(command);
 
-            for (let value in result.Contents) {
-                let entity = { id: value.Key, uid: uid, section: section };
-                eventEmitter.emit('document', entity);
+            if (result.Contents) {
+                result.Contents.forEach(value => {
+                    const atoms = value.Key.split('/');
+                    const entity = { uid: atoms[0], section: atoms[1], id: atoms[2] };
+                    eventEmitter.emit('document', entity);
+                });
             }
 
-            isTruncated = result.IsTruncated;
+            isTruncated = result.IsTruncated || false;
             if (isTruncated) {
                 continuationToken = result.NextContinuationToken;
             }
@@ -176,7 +180,7 @@ const defaultBucketName = 'xordata';
         return new Promise((resolve, reject) => {
             let documents = [];
             let emitter = new EventEmitter();
-            emitter.on('end', () => resolve(e));
+            emitter.on('end', () => resolve(documents));
             emitter.on('document', (e) => documents.push(e));
             this.scan(uid, section, emitter);
         });

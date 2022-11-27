@@ -119,62 +119,52 @@ document.addEventListener('DOMContentLoaded', function () {
     // DocumentList
     // --------------------------------------------------------------------------------
 
-    class DocumentUploader extends React.Component {
+    class DocumentElement extends React.Component {
+        render() {
+            const document = this.props.document;
+            return React.createElement('tr', null,
+                React.createElement('td', null,
+                    React.createElement('i', { className: `fa-solid fa-file` })),
+                React.createElement('td', null,
+                    React.createElement('a', { href: `/documents/${document.oid}` },
+                        React.createElement('span', null, document.description))));
+        }
+    }
+
+    class DocumentTile extends React.Component {
         constructor(props) {
             super(props);
-            this.onFileChange = this.onFileChange.bind(this);
             this.state = {
                 error: null,
-                isUploading: false
-            };
+                isLoaded: false,
+                documents: []
+            }
         }
 
-        onFileChange(e) {
-            const selectedFile = e.target.files[0];
-
-            // Create an object of formData
-            const formData = new FormData();
-
-            formData.append("section", this.props.section.key);
-            formData.append("dataFile", selectedFile, selectedFile.name);
-
-            // Request made to the backend api
-            // Send formData object
-            this.setState({
-                isUploading: true
-            });
-
-            axios
-                .post('/api/documents', formData, { headers: { 'Content-Type': 'multipart/form-data' }})
-                .then((response) => {
-                    console.log('file uploaded');
-                    console.log(response);
+        componentDidMount() {
+            fetch(`/api/documents?section=${this.props.section.key}`)
+                .then(res => res.json())
+                .then((res) => {
                     this.setState({
-                        isUploading: false,
-                        error: null
+                        isLoaded: true,
+                        documents: res.documents
                     });
-                })
-                .catch((error) => {
-                    console.log('file upload failed');
-                    console.log(error);
+                }, (error) => {
                     this.setState({
-                        isUploading: false,
+                        isLoaded: true,
                         error: error
                     });
                 });
         }
 
-        render() {
+        renderUploadLink(section) {
             return React.createElement('div', null,
-                React.createElement('label', { className: 'is-small' },
+                React.createElement('a', { className: 'button is-small is-outlined is-primary', href: `/documents/upload?section=${section.key}` },
                     React.createElement('i', { className: 'fa-solid fa-plus' }),
-                    React.createElement('input', { type: 'file', hidden: true, accept: '.json', onChange: this.onFileChange })
                 )
             );
         }
-    }
 
-    class DocumentTile extends React.Component {
         renderCardHeader(section) {
             return React.createElement('div', { className: 'card-header' },
                 React.createElement('p', { className: 'card-header-icon' },
@@ -182,18 +172,27 @@ document.addEventListener('DOMContentLoaded', function () {
                 ),
                 React.createElement('div', { className: 'card-header-title is-justify-content-space-between' },
                     React.createElement('span', { id: `${section.title}` }, section.title),
-                    React.createElement(DocumentUploader, { section: section })
+                    this.renderUploadLink(section)
                 )
             );
         }
 
         renderCardContent(section) {
-            return React.createElement('div', { className: 'card-content' });
+            const documents = this.state.documents || [];
+            return React.createElement('div', { className: 'card-content columns is-mobile is-centered' },
+                React.createElement('div', { className : 'column' },
+                    React.createElement('table', { className : 'table' },
+                        React.createElement('tbody', null,
+                            documents.map(document => React.createElement(DocumentElement, { key : document.oid, document : document }))
+                        )
+                    )
+                )
+            );
         }
 
         render() {
             const section = this.props.section;
-            return React.createElement('div', { className : 'column', key : section.name },
+            return React.createElement('div', { className : 'column is-5', key : section.name },
                 React.createElement('div', { className : 'card' },
                     this.renderCardHeader(section),
                     this.renderCardContent(section)
@@ -233,7 +232,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         renderSections(sections) {
-            return React.createElement('div', { className : 'columns is-multiline' },
+            return React.createElement('div', { className : 'columns is-vertical is-multiline' },
                 sections.map(section => React.createElement(DocumentTile, { section: section, key : section.key })));
         }
 
@@ -265,6 +264,7 @@ document.addEventListener('DOMContentLoaded', function () {
             super(props);
             this.state = {
                 error: null,
+                description: null,
                 fileMedical: null,
                 filePrivateKey: null,
                 dataMedical: null,
@@ -273,9 +273,15 @@ document.addEventListener('DOMContentLoaded', function () {
 
             this.onSign = this.onSign.bind(this);
             this.onSend = this.onSend.bind(this);
-            this.onCancel = this.onCancel.bind(this);
             this.onChangeFileMedical = this.onChangeFileMedical.bind(this);
             this.onChangeFilePrivateKey = this.onChangeFilePrivateKey.bind(this);
+            this.onChangeDescription = this.onChangeDescription.bind(this);
+        }
+
+        onChangeDescription(e) {
+            this.setState({
+                description: e.target.value
+            });
         }
 
         onChangeFilePrivateKey(e) {
@@ -318,22 +324,17 @@ document.addEventListener('DOMContentLoaded', function () {
                             return openpgp.createMessage({ text: dataMedical });
                         })
                         .then(dataMessage => openpgp.sign({ message: dataMessage, signingKeys: privateKey, detached: true, format: 'armored' }))
-                        .then(signature => this.setState({ signature : signature }))
-                        .then(() => {
-                            window.location.href = '/documents';
-                        });
+                        .then(signature => this.setState({ signature : signature }));
                 });
         }
         
         onSend(e) {
-            const canBeSent = this.state.signature != null && this.state.dataMedical != null;
             const document = {
                 section: this.props.section,
                 message: this.state.dataMedical,
-                signature: this.state.signature
+                signature: this.state.signature,
+                description: this.state.description
             };
-
-            console.log(JSON.stringify(document));
 
             axios
                 .post('/api/documents', document, { headers: { 'Content-Type': 'application/json' } })
@@ -341,6 +342,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     console.log('file uploaded');
                     console.log(response);
                     this.setState({ error: null });
+                    window.location.href = '/documents';
                 })
                 .catch((error) => {
                     console.log('file upload failed');
@@ -349,13 +351,9 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
         }
 
-        onCancel(e) {
-            console.log('currently does nothing');
-        }
-
         renderButtons() {
             const canBeSigned = this.state.fileMedical != null && this.state.filePrivateKey != null;
-            const canBeSent = this.state.signature != null && this.state.dataMedical != null;
+            const canBeSent = this.state.signature != null && this.state.dataMedical != null && this.state.description != null;
 
             return React.createElement("div", { className: "field" },
                 React.createElement("button", {
@@ -376,11 +374,12 @@ document.addEventListener('DOMContentLoaded', function () {
                     React.createElement("i", { className: 'fa-solid fa-share mr-2' }),
                     React.createElement("span", {}, "Send")
                 ),
-                React.createElement("button", { className: "button is-light ml-2", onClick: this.onCancel }, "Cancel")
+                React.createElement("a", { className: "button is-light ml-2", href : `/documents` }, "Cancel")
             );
         }
 
         render() {
+            const description = this.state.description || '';
             const signature = this.state.signature || '';
             const section = this.props.section;
 
@@ -389,6 +388,16 @@ document.addEventListener('DOMContentLoaded', function () {
                     React.createElement("div", { className: "field" }, " ",
                         React.createElement("label", { className: "label" }, "Section"),
                         React.createElement("input", { type: "text", readOnly: true, value: section, className: "input" })
+                    ),
+                    React.createElement("div", { className: "field" }, " ",
+                        React.createElement("label", { className: "label" }, "Description"),
+                        React.createElement("input", {
+                            className: "input", 
+                            type: "text",
+                            value: description,
+                            placeholder: 'A descriptive name for this document',
+                            onChange: this.onChangeDescription
+                        })
                     ),
                     React.createElement("div", { className: "field" },
                         React.createElement("label", { className: "label" }, "Medical Document"),
@@ -426,5 +435,184 @@ document.addEventListener('DOMContentLoaded', function () {
         ReactDOM
             .createRoot(documentSigner)
             .render(React.createElement(DocumentSigner, { section: section }));
+    }
+
+    // --------------------------------------------------------------------------------
+    // DocumentReview
+    // --------------------------------------------------------------------------------
+
+    class DocumentReview extends React.Component {
+        constructor(props) {
+            super(props);
+            this.state = {
+                activeTab: 'properties',
+                document: null
+            }
+
+            this.onSelectProperties = this.onSelectProperties.bind(this);
+            this.onSelectAccessControls = this.onSelectAccessControls.bind(this);
+            this.onSelectAudit = this.onSelectAudit.bind(this);
+        }
+
+        componentDidMount() {
+            fetch(`/api/documents/${this.props.documentId}`)
+                .then(res => res.json())
+                .then(res => {
+                    this.setState({ document: res.document });
+                }, (error) => {
+                    this.setState({ error: error });
+                });
+        }
+
+        onSelectProperties(e) {
+            this.setState({ activeTab: 'properties' });
+        }
+
+        onSelectAccessControls(e) {
+            this.setState({ activeTab: 'access' });
+        }
+
+        onSelectAudit(e) {
+            this.setState({ activeTab: 'audit' });
+        }
+
+        getTabActive(tab) {
+            if (tab == this.state.activeTab) {
+                return 'is-active';
+            } else {
+                return '';
+            }
+        }
+
+        renderTabs() {
+            return React.createElement("div", { className: "tabs" },
+                React.createElement("ul", null,
+                    React.createElement("li", { className: this.getTabActive('properties') },
+                        React.createElement("a", { onClick: this.onSelectProperties },
+                            React.createElement("span", { className: "icon is-small" },
+                                React.createElement("i", { className: "fa-solid fa-gear" })
+                            ),
+                            React.createElement("span", null, "Properties")
+                        )
+                    ),
+                    React.createElement("li", { className: this.getTabActive('access') },
+                        React.createElement("a", { onClick: this.onSelectAccessControls },
+                            React.createElement("span", { className: "icon is-small" },
+                                React.createElement("i", { className: "fa-solid fa-lock" })
+                            ),
+                            React.createElement("span", null, "Access Controls")
+                        )
+                    ),
+                    React.createElement("li", { className: this.getTabActive('audit') },
+                        React.createElement("a", { onClick: this.onSelectAudit },
+                            React.createElement("span", { className: "icon is-small" },
+                                React.createElement("i", { className: "fa-solid fa-clock" })
+                            ),
+                            React.createElement("span", null, "Audit")
+                        )
+                    )
+                )
+            );
+        }
+
+        renderContentProperties() {
+            const oid = this.state.document.oid;
+            const description = this.state.document.description;
+            const section = this.state.document.section;
+            const timestamp = this.state.document.timestamp;
+
+            return React.createElement("div", { className: "columns" },
+                React.createElement("div", { className: "column is-half" },
+                    React.createElement("div", { className: "field" }, " ",
+                        React.createElement("label", { className: "label" }, "Document Id"),
+                        React.createElement("input", {
+                            type: "text", 
+                            readOnly: true, 
+                            value: oid, 
+                            className: "input"
+                        })
+                    ),
+                    React.createElement("div", { className: "field" }, " ",
+                        React.createElement("label", { className: "label" }, "Section"),
+                        React.createElement("input", {
+                            type: "text",
+                            readOnly: true,
+                            value: section,
+                            className: "input"
+                        })
+                    ),
+                    React.createElement("div", { className: "field" }, " ",
+                        React.createElement("label", { className: "label" }, "Description"),
+                        React.createElement("input", {
+                            className: "input",
+                            type: "text",
+                            value: description,
+                            readOnly: true,
+                            placeholder: 'A descriptive name for this document',
+                            onChange: this.onChangeDescription
+                        })
+                    ),
+                    React.createElement("div", { className: "field" },
+                        React.createElement("label", { className: "label" }, "Timestamp"),
+                        React.createElement("input", {
+                            className: "input",
+                            type: "text",
+                            readOnly: true,
+                            value: timestamp
+                        })
+                    )
+                )
+            );
+        }
+
+        renderContentAccess() {
+            const oid = this.state.document.oid;
+            const description = this.state.document.description;
+            const section = this.state.document.section;
+
+            return React.createElement("div", { className: "columns" },
+                React.createElement("div", { className: "column is-half" },
+                )
+            );
+        }
+
+        renderContentAudit() {
+            const oid = this.state.document.oid;
+            const description = this.state.document.description;
+            const section = this.state.document.section;
+
+            return React.createElement("div", { className: "columns" },
+                React.createElement("div", { className: "column is-half" },
+                )
+            );
+        }
+
+        renderContent() {
+            if (this.state.document !== null) {
+                if (this.state.activeTab == 'properties') {
+                    return this.renderContentProperties();
+                } else if (this.state.activeTab == 'access') {
+                    return this.renderContentAccess();
+                } else if (this.state.activeTab == 'audit') {
+                    return this.renderContentAudit();
+                }
+            }
+
+            return null;
+        }
+
+        render() {
+            return React.createElement('div', null,
+                this.renderTabs(),
+                this.renderContent());
+        }
+    }
+
+    const documentReview = document.getElementById('document-review');
+    if (documentReview) {
+        const documentId = documentReview.dataset.documentId;
+        ReactDOM
+            .createRoot(documentReview)
+            .render(React.createElement(DocumentReview, { documentId : documentId }));
     }
 });

@@ -1,0 +1,12 @@
+extends layout
+
+block content
+  include header.jade
+  .card.mt-5
+    .card-header.is-error
+      p.card-header-title User Profile Not Found
+    .card-content.control(id='profile-not-found')
+      div
+      | Sorry, but it appears the profile you were searching for does not exist.  But you knew that, so please try again.
+      div.mt-5
+        a.button.is-primary(href='/') Return to the homepage

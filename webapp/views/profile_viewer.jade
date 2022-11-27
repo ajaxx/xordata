@@ -2,28 +2,37 @@ extends layout
 
 block content
   include header.jade
-  section(class="section")
-    .card
-      .card-header
-        p.card-header-title User Profile
-      .card-content.control(id='user-profile')
+  .tiles 
+    .tile
+      .box
         .field
           label.label Username
-          .control.has-icons-left
-            input.input(type='text' readonly value='#{userProfile.user}')
-            span.icon.is-small.is-left
-              i.fas.fa-user
+          input.input(type='text' readonly value='#{viewUserProfile.user}')
         .field
-          label.label Name
-          .control
-            input.input(type='text' value='#{userProfile.display_name}')
-        .field
-          label.label Email
-          .control.has-icons-left
-            input.input(type='email' readonly value='#{userProfile.email}')
-            span.icon.is-small.is-left
-              i.fas.fa-envelope
-        button.button.is-link
-          | Submit
-        button.button.is-light.ml-2
-          | Cancel
+          label.label Display Name
+          input.input(type='text' readonly value='#{viewUserProfile.display_name}')
+
+        if relationship
+          if relationship.status == 'requested'
+            .has-text-info
+              | A request to connect has been sent to this party and is pending.
+          else if relationship.status == 'pending'
+            .has-text-info
+              | You have an incoming request to connect from this party.
+            .buttons.mt-5
+              a.button.is-primary(href='/profile/approve/#{viewUserProfile.uid}')
+                span Approve
+              a.button.is-primary(href='/profile/decline/#{viewUserProfile.uid}')
+                span Decline
+          else if relationship.status == 'decliner'
+            .has-text-warning-dark
+              | You have declined this party's request to connect.
+          else if relationship.status == 'declined'
+            .has-text-warning-dark
+              | This party has declined your request to connect.
+          else if relationship.status == 'connected'
+            .has-text-info
+              | You are connected to this party.
+        else
+          a.button.is-primary(href='/profile/connect/#{viewUserProfile.uid}')
+            span Connect

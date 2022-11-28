@@ -8,7 +8,7 @@ const aesjs = require('aes-js');
 const crypto = require('crypto');
 
 const { EventEmitter } = require('events');
-const { PutObjectCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
+const { GetObjectCommand, PutObjectCommand, ListObjectsV2Command } = require('@aws-sdk/client-s3');
 const { resourceLimits } = require('worker_threads');
 
 const Keys = require('./model_keys').Singleton;
@@ -129,8 +129,24 @@ const defaultBucketName = 'xordata';
         return {
             id: docid,
             timestamp: timestamp,
-            kek: encryptionKeyEncrypted
+            kek: encryptionKeyEncrypted,
+            dockey: dockey
         };
+    }
+
+    async get(uid, oid) {
+        const dockey = `${uid}/${document.section}/${oid}`;
+        let params = {
+            Bucket: this.bucketName,
+            Prefix: prefix,
+            MaxKeys: 100,
+            ContinuationToken: continuationToken
+        }
+
+        const client = await this.client();
+        const command = new GetObjectCommand(params);
+        const result = await client.send(command);
+
     }
 
     async scan(uid, section, eventEmitter) {

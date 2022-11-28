@@ -5,51 +5,39 @@ const debug = require('debug')('xordata:dao:index');
 
 const { GetItemCommand, DeleteItemCommand, PutItemCommand, QueryCommand } = require('@aws-sdk/client-dynamodb');
 
-const defaultTableName = 'XorData-Documents';
+const defaultTableName = 'XorData-Grants';
 
 function itemToEntity(entity) {
     if (entity) {
         return {
-            uid: entity.uid.S,
+            src_uid: entity.src_uid.S,
+            dst_uid: entity.dst_uid.S,
             oid: entity.oid.S,
-            section: entity.section.S,
-            description: entity.description.S,
-            dockey: entity.dockey.S,
             kek: entity.kek.S,
             timestamp: entity.timestamp.S
         }
     }
 }
 
-/* export */ class DocumentIndexDAO extends DynamoV2DAO {
+/* export */ class GrantsDAO extends DynamoV2DAO {
     constructor(configuration) {
         super(configuration, defaultTableName);
     }
 
-    async findAll(uid, section) {
-        let keyConditionExpression = 'uid = :u';
+    async findByOwner(uid, oid) {
+        let keyConditionExpression = 'src_uid = :u';
         let expressionAttributeValues = { ':u': { 'S': uid } }
-        let expressionAttributeNames = { }
-
-        if (section) {
-            keyConditionExpression += ' AND #sc = :s';
-            expressionAttributeValues[':s'] = { 'S' : section }
-            expressionAttributeNames['#sc'] = 'section';
-        }
 
         const params = {
             TableName: this.tableName,
+            IndexName: 'src_uid-index',
             KeyConditionExpression: keyConditionExpression,
             ExpressionAttributeValues: expressionAttributeValues,
         }
 
-        if (section) {
-            params['IndexName'] = 'uid-section-index';
-            params['ScanIndexForward'] = false;
-        }
-
-        if (Object.keys(expressionAttributeNames) != 0) {
-            params['ExpressionAttributeNames'] = expressionAttributeNames;
+        if (oid) {
+            params.ExpressionAttributeValues[':o'] = { 'S' : oid };
+            params.FilterExpression = 'oid = :o'
         }
 
         const client = await this.client();
@@ -61,11 +49,30 @@ function itemToEntity(entity) {
         return [];
     }
 
-    async get(uid, oid) {
+    async findByDestination(uid) {
+        let keyConditionExpression = 'dst_uid = :u';
+        let expressionAttributeValues = { ':u': { 'S': uid } }
+
+        const params = {
+            TableName: this.tableName,
+            KeyConditionExpression: keyConditionExpression,
+            ExpressionAttributeValues: expressionAttributeValues
+        }
+
+        const client = await this.client();
+        const command = new QueryCommand(params);
+        const result = await client.send(command);
+        if (result.Items) {
+            return result.Items.map(itemToEntity);
+        }
+        return [];
+    }
+
+    async get(dst_uid, oid) {
         const params = {
             TableName: this.tableName,
             Key: {
-                'uid': { "S": uid },
+                'dst_uid': { "S": dst_uid },
                 'oid': { "S": oid }
             }
         }
@@ -76,17 +83,16 @@ function itemToEntity(entity) {
         return itemToEntity(result.Item);
     }
 
-    async put(index) {
+    async put(grant) {
+        const timestamp = (new Date()).toISOString();
         const params = {
             TableName: this.tableName,
             Item : {
-                'uid' : { "S" : index.uid },
-                'oid' : { "S": index.oid },
-                'section' : { "S" : index.section },
-                'description' : { "S": index.description },
-                'timestamp' : { "S" : index.timestamp },
-                'kek' : { "S" : index.kek },
-                'dockey' : { "S" : index.dockey }
+                'src_uid' : { "S" : grant.src_uid },
+                'dst_uid' : { "S": grant.dst_uid },
+                'oid' : { "S": grant.oid },
+                'kek' : { "S" : grant.kek },
+                'timestamp' : { "S" : timestamp }
             }
         }
 
@@ -94,14 +100,14 @@ function itemToEntity(entity) {
         const command = new PutItemCommand(params);
 
         await client.send(command);
-        return index;
+        return grant;
     }
 
-    async delete(uid, oid) {
+    async delete(dst_uid, oid) {
         const params = {
             TableName: this.tableName,
             Key: { 
-                'uid': { "S": uid },
+                'dst_uid': { "S": dst_uid },
                 'oid': { "S": oid }
              }
         }
@@ -109,14 +115,12 @@ function itemToEntity(entity) {
         const client = await this.client();
         const command = new DeleteItemCommand(params);
         await client.send(command);
-        return { uid: uid, oid: oid }
+        return { dst_uid: dst_uid, oid: oid }
     }
 }
 
-const Singleton = new DocumentIndexDAO();
+const Singleton = new GrantsDAO();
 
 module.exports = {
-    DocumentIndexDAO: DocumentIndexDAO,
     Singleton: Singleton,
-    findAll: (uid, section) => Singleton.findAll(uid, section)
 };

@@ -18,5 +18,6 @@ router.use(function(req, res, next) {
 router.use('/documents', require('./api/documents'));
 router.use('/sections', require('./api/sections'));
 router.use('/keys', require('./api/keys'));
+router.use('/grants', require('./api/grants'));
 
 module.exports = router;

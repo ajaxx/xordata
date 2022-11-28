@@ -542,7 +542,7 @@ document.addEventListener('DOMContentLoaded', function () {
                     ),
                     React.createElement("div", { className: "field" },
                         React.createElement("label", { className: "label" }, "Signature"),
-                        React.createElement("textarea", { id: "document-signature", className: "textarea", readOnly: true, value: signature, rows: 10 })
+                        React.createElement("textarea", { id: "document-signature", className: "textarea", readOnly: true, value: signature, rows: 5 })
                     ),
                     this.renderButtons()
                 )
@@ -562,29 +562,120 @@ document.addEventListener('DOMContentLoaded', function () {
     // DocumentReview
     // --------------------------------------------------------------------------------
 
+    class DocumentReviewAtom extends React.Component {
+        constructor(props) {
+            super(props);
+            this.onRequestShareLink = this.onRequestShareLink.bind(this);
+        }
+
+        onRequestShareLink(e) {
+            window.location.href = `/documents/share/${this.props.document}/${this.props.destination}`
+        }
+
+        renderGrant() {
+            const grant = this.props.grant;
+
+            return React.createElement('tr', { className: '' },
+                React.createElement('td', { className: '' }, grant.dst_uid),
+                React.createElement('td', { className: '' }, grant.src_uid),
+                React.createElement('td', { className: '' }, grant.timestamp),
+                React.createElement('td', { className: '' }, grant.kek),
+                React.createElement('a', { className: 'button is-small' },
+                    React.createElement('i', { className: 'fa-solid fa-trash fa-lg' })
+                )
+            );
+        }
+
+        renderEmpty() {
+            const destination = this.props.destination;
+            return React.createElement('tr', { className: '' },
+                React.createElement('th', { className: '' }, destination),
+                React.createElement('td', { className: '' }),
+                React.createElement('td', { className: '' }),
+                React.createElement('td', { className: '' }),
+                React.createElement('td', { className: '' },
+                    React.createElement('a', { className: 'button is-pulled-right is-small', onClick: this.onRequestShareLink },
+                        React.createElement('i', { className: 'fa-solid fa-link' })
+                    )
+                ),
+            );
+        }
+
+        render() {
+            if (this.props.grant) {
+                return this.renderGrant();
+            } else {
+                return this.renderEmpty();
+            }
+        }
+    }
+
     class DocumentReviewAccess extends React.Component {
         constructor(props) {
             super(props);
             this.state = {
-                access: null
+                grants: null
             }
         }
 
         componentDidMount() {
             const oid = this.props.document.oid;
-            fetch(`/api/documents/access/${oid}`)
+            fetch(`/api/grants/index/${oid}`)
                 .then(res => res.json())
                 .then(res => {
-                    this.setState({ access: res.access });
+                    this.setState({ grants: res });
                 }, (error) => {
                     this.setState({ error: error });
                 });
+        }
+
+        renderGrantTable() {
+            const grants = this.state.grants;
+            if (grants == null) {
+                return React.createElement('div');
+            } else {
+                // Creating the rows for the body is a bit tricky because we need
+                // to do a rowspan
+
+                return React.createElement("table", { className: 'table' },
+                    React.createElement("thead", { className: '' },
+                        React.createElement('tr', { className: '' },
+                            React.createElement('th', { className: '' }, 'Consumer'),
+                            React.createElement('th', { className: '' }, 'Owner'),
+                            React.createElement('th', { className: '' }, 'Timestamp'),
+                            React.createElement('th', { className: '' }, 'Grant Key'),
+                            React.createElement('th', { className: '' }, 'Actions'),
+                        )
+                    ),
+                    React.createElement("tbody", { className: '' }, 
+                        Object.entries(grants).flatMap(entry => {
+                            let destination = entry[0];
+                            let grants = entry[1];
+
+                            if (grants.length == 0) {
+                                return React.createElement(DocumentReviewAtom, {
+                                    key: destination,
+                                    document: this.props.document.oid,
+                                    destination: destination
+                                });
+                            } else {
+                                return grants.map(grant => React.createElement(DocumentReviewAtom, {
+                                    key: grant.dst_uid,
+                                    document: this.props.document.oid,
+                                    grant: grant
+                                }));
+                            }
+                        })
+                    )
+                );
+            }
         }
 
         render() {
             const oid = this.props.document.oid;
             return React.createElement("div", { className: "columns" },
                 React.createElement("div", { className: "column is-half" },
+                    this.renderGrantTable()
                 )
             );
         }
@@ -753,5 +844,183 @@ document.addEventListener('DOMContentLoaded', function () {
         ReactDOM
             .createRoot(documentReview)
             .render(React.createElement(DocumentReview, { documentId : documentId }));
+    }
+
+    // --------------------------------------------------------------------------------
+    // GrantBuilder
+    // --------------------------------------------------------------------------------
+    class GrantBuilder extends React.Component {
+        constructor(props) {
+            super(props);
+            this.state = {
+                // grant request
+                destination: null,
+                description: null,
+                kek: null,
+                // private key
+                filePrivateKey: null
+            }
+
+            this.onChangeFilePrivateKey = this.onChangeFilePrivateKey.bind(this);
+            this.onSend = this.onSend.bind(this);
+        }
+
+        readAsync(file) {
+            return new Promise((resolve, reject) => {
+                const fileReader = new FileReader();
+                fileReader.addEventListener('load', () => {
+                    return resolve(fileReader.result);
+                });
+                fileReader.readAsText(file);
+            });
+        }
+
+        async readPrivateKey() {
+            const armoredPrivateKey = await this.readAsync(this.state.filePrivateKey);
+            return await openpgp.readPrivateKey({ armoredKey: armoredPrivateKey });
+        }
+
+        async decryptKeK() {
+            const privateKey = await this.readPrivateKey();
+            const message = await openpgp.readMessage({ armoredMessage: this.state.kek });
+            const symkey = await openpgp.decrypt({ message, decryptionKeys: privateKey });
+            return symkey.data;
+        }
+
+        onSend(e) {
+            this.decryptKeK().then(async encryptionKeyText => {
+                const destinationKeys = await openpgp.readKey({ armoredKey: this.state.destination.key });
+                const encryptionKeyMessage = await openpgp.createMessage({ text: encryptionKeyText });
+                const encryptionKeyEncrypted = await openpgp.encrypt({
+                    message: encryptionKeyMessage,
+                    encryptionKeys: destinationKeys
+                });
+
+                const grant = {
+                    dst_uid: this.props.destinationUser,
+                    oid : this.props.documentId,
+                    kek : encryptionKeyEncrypted
+                }
+
+                const response = await axios.post('/api/documents/share', grant, { headers: { 'Content-Type': 'application/json' } });
+
+                console.log('grant uploaded');
+                console.log(response);
+                this.setState({ error: null });
+                window.location.href = '/documents';
+            })
+            .catch((error) => {
+                console.log('file upload failed');
+                console.log(error);
+                this.setState({ error: error });
+            });
+        }
+
+        onChangeFilePrivateKey(e) {
+            this.setState({
+                filePrivateKey: e.target.files[0]
+            });
+        }
+
+        componentDidMount() {
+            fetch(`/api/documents/share/${this.props.documentId}/${this.props.destinationUser}`)
+                .then(res => res.json())
+                .then(res => {
+                    this.setState({
+                        kek: res.kek,
+                        description: res.description,
+                        destination: res.destination
+                     });
+                }, (error) => {
+                    this.setState({ error: error });
+                });
+        }
+
+        renderButtons() {
+            const canBeSent =
+                this.state.kek &&
+                this.state.description &&
+                this.state.destination &&
+                this.state.filePrivateKey;
+
+            return React.createElement("div", { className: "field" },
+                React.createElement("button", {
+                        id: "action",
+                        className: "button is-link ml-2",
+                        disabled: !canBeSent,
+                        onClick: this.onSend
+                    },
+                    React.createElement("i", { className: 'fa-solid fa-share mr-2' }),
+                    React.createElement("span", {}, "Share")
+                ),
+                React.createElement("a", { className: "button is-light ml-2", href: `/documents` }, "Cancel")
+            );
+        }
+
+        render() {
+            let destination = null;
+            if (this.state.destination == null) {
+                destination = '';
+            } else {
+                destination = `${this.state.destination.uid} / ${this.state.destination.user}`
+            }
+
+            return React.createElement("div", { className: '' },
+                React.createElement("div", { className: "column" },
+                    React.createElement("p", { className: "has-text-danger" },
+                        "You are granting permissions for the designated party to read the document below."
+                    )
+                ),
+                React.createElement("div", { className: "column" },
+                    React.createElement("div", { className: "field" },
+                        React.createElement("label", { className: "label" }, "File Description"),
+                        React.createElement("input", {
+                            type: "text",
+                            readOnly: true,
+                            className: "input",
+                            value: this.state.description || ''
+                        })
+                    ),
+                    React.createElement("div", { className: "field" },
+                        React.createElement("label", { className: "label" }, "Consuming Counterparty"),
+                        React.createElement("input", {
+                            type: "text",
+                            readOnly: true,
+                            className: "input",
+                            value: destination
+                        })
+                    ),
+                    React.createElement("div", { className: "field" },
+                        React.createElement("label", { className: "label" }, "Encrypted Cipher Key"),
+                        React.createElement("textarea", {
+                            className: "textarea",
+                            readOnly: true,
+                            rows: 6,
+                            value: this.state.kek || ''
+                        })
+                    ),
+                    React.createElement("div", { className: "field" },
+                        React.createElement("label", { className: "label" }, "Private Key"),
+                        React.createElement("input", {
+                            type: "file",
+                            accept: ".pem",
+                            className: "input",
+                            onChange: this.onChangeFilePrivateKey
+                     })
+                    ),
+                    this.renderButtons()
+                )
+            );
+        }
+    }
+ 
+    const grantBuilder = document.getElementById('grant-builder');
+    if (grantBuilder) {
+        ReactDOM
+            .createRoot(grantBuilder)
+            .render(React.createElement(GrantBuilder, {
+                documentId: grantBuilder.dataset.documentId,
+                destinationUser: grantBuilder.dataset.destinationUser
+            }));
     }
 });

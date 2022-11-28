@@ -1,0 +1,6 @@
+extends layout
+
+block content
+  include header.jade
+  .box.p-2(id='grant-builder', data-document-id='#{documentId}' data-destination-user="#{destinationUser}")
+  script(src="/lib/openpgp.min.js")

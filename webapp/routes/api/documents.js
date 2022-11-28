@@ -9,6 +9,9 @@ const controller_reindex = require('../../controllers/reindex');
 
 const DocumentModel = require('../../models/model_document').Singleton;
 const DocumentIndexModel = require('../../models/model_document_index').Singleton;
+const UserProfileModel = require('../../models/model_user_profile').Singleton;
+const KeysModel = require('../../models/model_keys').Singleton;
+const GrantModel = require('../../models/model_grants').Singleton;
 const sections = require('../../models/model_sections');
 
 /**
@@ -58,7 +61,9 @@ router.post('/', express.json(), (req, res, next) => {
                     uid: req.userProfile.uid,
                     section: req.body.section,
                     description: req.body.description,
-                    timestamp: result.timestamp
+                    timestamp: result.timestamp,
+                    dockey: result.dockey,
+                    kek: result.kek
                 };
 
                 await DocumentIndexModel.put(index);
@@ -82,6 +87,53 @@ router.get('/access/:docId', (req, res, next) => {
         .catch(error => next(error));
 });
 
+router.post('/share', express.json(), (req, res, next) => {
+    console.log(req.body);
+    const grant = {
+        src_uid: req.userProfile.uid,
+        dst_uid: req.body.dst_uid,
+        oid: req.body.oid,
+        kek: req.body.kek
+    }
+
+    if (grant.src_uid &&
+        grant.dst_uid &&
+        grant.oid &&
+        grant.kek) {
+        GrantModel
+            .put(grant)
+            .then(result => res.json(result))
+            .catch(error => next(error));
+    } else {
+        console.log(grant);
+        res.sendStatus(400);
+    }
+});
+
+router.get('/share/:docId/:dstId', (req, res, next) => {
+    const srcId = req.userProfile.uid;
+    const docId = req.params.docId;
+    const dstId = req.params.dstId;
+    if (srcId && dstId && docId) {
+        UserProfileModel.get(dstId).then(async dstUserProfile => {
+            const keys = await KeysModel.findAll(dstId);
+
+            // Verify the index for the document (as it must belong to the current caller)
+            const index = await DocumentIndexModel.get(srcId, docId);
+            res.json({
+                kek: index.kek,
+                description: index.description,
+                destination: {
+                    uid: dstUserProfile.uid,
+                    user: dstUserProfile.user,
+                    key: keys[0].key
+                }
+            });
+        }).catch(error => next(error));
+    } else {
+        res.sendStatus(400);
+    }
+});
 
 /**
  * Reindexes the documents for this user

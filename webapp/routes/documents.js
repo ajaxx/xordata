@@ -3,6 +3,9 @@ const router = express.Router();
 const debug = require('debug')('xordata:page:documents');
 const sections = require('../models/model_sections');
 
+const IndexModel = require('../models/model_document_index').Singleton;
+const UserProfileModel = require('../models/model_user_profile').Singleton;
+
 router.use(require('../auth_jwt'));
 router.use(function (req, res, next) {
   debug('api call invoked');
@@ -15,6 +18,21 @@ router.use(function (req, res, next) {
 
 router.get('/', (req, res) => {
   res.render('documents', { userProfile: req.userProfile });
+});
+
+router.get('/share/:docId/:dstId', (req, res, next) => {
+  const srcId = req.userProfile.uid;
+  const docId = req.params.docId;
+  const dstId = req.params.dstId;
+  if (srcId && dstId && docId) {
+    res.render('share', {
+      documentId: docId,
+      destinationUser: dstId,
+      userProfile: req.userProfile
+    });
+  } else {
+    res.sendStatus(400);
+  }
 });
 
 router.get('/upload', (req, res) => {

@@ -369,11 +369,181 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     }
 
-    const documentsList = document.getElementById('xordata-documents-list');
-    if (documentsList) {
+    class SharedDocumentItem extends React.Component {
+        constructor(props) {
+            super(props);
+        }
+
+        render() {
+            const grant = this.props.grant;
+            const link = `/documents/view/${grant.oid}/${grant.src_uid}`;
+
+            console.log(this.props.grant);
+            return React.createElement('div', { className: 'column is-2' },
+                React.createElement('div', { className: 'card' },
+                    React.createElement('div', { className: 'card-header' },
+                        React.createElement('div', { className: 'card-header-title is-justify-content-space-between' },
+                            React.createElement('a', { href: link }, 
+                                React.createElement('span', { className: '' }, grant.description)
+                            ),
+                            React.createElement('div', null,
+                                React.createElement('a', { href: link, className: 'is-small is-outlined is-primary' },
+                                    React.createElement('i', { className: 'fa-thin fa-files-medical' })
+                                )
+                            )
+                        )
+                    ),
+                    React.createElement('div', { className: 'card-content' },
+                        React.createElement('div', { className: 'is-clipped' }, grant.timestamp),
+                        React.createElement('div', { className: 'is-clipped is-ellipsis' }, grant.oid)
+                    )
+                )
+            );
+        }
+    }
+
+    class SharedDocumentTileList extends React.Component {
+        constructor(props) {
+            super(props);
+            this.state = {
+                error: null,
+                isLoaded: false,
+                grants: []
+            }
+        }
+
+        componentDidMount() {
+            fetch('/api/grants/dst')
+                .then(async res => {
+                    let grants = await res.json();
+                    this.setState({
+                        isLoaded: true,
+                        grants: grants
+                    });
+                })
+                .catch(error => {
+                    this.setState({
+                        isLoaded: true,
+                        error: error
+                    });
+                });
+        }
+
+        renderIsLoading() {
+            return React.createElement('div', null, 'Loading ...');
+        }
+
+        renderGrantTable() {
+            const grants = this.state.grants;
+            if (grants == null) {
+                return React.createElement('div');
+            } else {
+                return React.createElement('div', { className: 'columns is-vertical is-multiline' },
+                    grants.map(grant => React.createElement(SharedDocumentItem, {
+                        key: grant.oid,
+                        grant: grant
+                    }))
+                );
+            }
+        }
+
+        render() {
+            if (this.state.error) {
+                // render an error
+            } else if (!this.state.isLoaded) {
+                return this.renderIsLoading();
+            } else {
+                return this.renderGrantTable();
+            }
+        }
+    }
+
+    class DocumentMaster extends React.Component {
+        constructor(props) {
+            super(props);
+            this.state = {
+                activeTab: 'mine',
+                document: null,
+                documentAccess: null
+            }
+
+            this.onSelectMyDocuments = this.onSelectMyDocuments.bind(this);
+            this.onSelectSharedDocuments = this.onSelectSharedDocuments.bind(this);
+        }
+
+        componentDidMount() {
+            fetch(`/api/documents/${this.props.documentId}`)
+                .then(res => res.json())
+                .then(res => {
+                    this.setState({ document: res.document });
+                }, (error) => {
+                    this.setState({ error: error });
+                });
+        }
+
+        onSelectMyDocuments(e) {
+            this.setState({ activeTab: 'mine' });
+        }
+
+        onSelectSharedDocuments(e) {
+            this.setState({ activeTab: 'shared' });
+        }
+
+        getTabActive(tab) {
+            if (tab == this.state.activeTab) {
+                return 'is-active';
+            } else {
+                return '';
+            }
+        }
+
+        renderTabs() {
+            return React.createElement("div", { className: "tabs" },
+                React.createElement("ul", null,
+                    React.createElement("li", { className: this.getTabActive('mine') },
+                        React.createElement("a", { onClick: this.onSelectMyDocuments },
+                            React.createElement("span", { className: "icon is-small" },
+                                React.createElement("i", { className: "fa-solid fa-files-medical" })
+                            ),
+                            React.createElement("span", null, "My Documents")
+                        )
+                    ),
+                    React.createElement("li", { className: this.getTabActive('shared') },
+                        React.createElement("a", { onClick: this.onSelectSharedDocuments },
+                            React.createElement("span", { className: "icon is-small" },
+                                React.createElement("i", { className: "fa-solid fa-share-nodes" })
+                            ),
+                            React.createElement("span", null, "Shared With You")
+                        )
+                    ),
+                )
+            );
+        }
+
+        renderContent() {
+            if (this.state.document !== null) {
+                if (this.state.activeTab == 'mine') {
+                    return React.createElement(DocumentTileList, {});
+                } else if (this.state.activeTab == 'shared') {
+                    return React.createElement(SharedDocumentTileList, {});
+                }
+            }
+
+            return null;
+        }
+
+        render() {
+            return React.createElement('div', null,
+                this.renderTabs(),
+                this.renderContent());
+        }
+    }
+
+    const documentsMaster = document.getElementById('documents-master');
+    if (documentsMaster) {
         ReactDOM
-            .createRoot(documentsList)
-            .render(React.createElement(DocumentTileList));
+            .createRoot(documentsMaster)
+            .render(React.createElement(DocumentMaster));
     }
 
     // --------------------------------------------------------------------------------
@@ -680,6 +850,7 @@ document.addEventListener('DOMContentLoaded', function () {
             );
         }
     }
+
     class DocumentReview extends React.Component {
         constructor(props) {
             super(props);

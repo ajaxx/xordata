@@ -5,12 +5,29 @@ const _ = require('lodash');
 
 const GrantsModel = require('../../models/model_grants').Singleton;
 const RelationshipModel = require('../../models/model_relationship').Singleton;
+const DocumentIndexModel = require('../../models/model_document_index').Singleton;
 
 // Returns "all" of the grants
-router.get('/', (req, res, next) => {
+router.get('/src', (req, res, next) => {
     GrantsModel
         .findByOwner(req.userProfile.uid)
         .then(grants => res.json(grants))
+        .catch(error => next(error));
+});
+
+// Returns "all" of the grants
+router.get('/dst', (req, res, next) => {
+    // We augment the grant information a little when it is going this direction
+    GrantsModel
+        .findByDestination(req.userProfile.uid)
+        .then(async grants => {
+            let grants_final = await Promise.all(grants.map(async grant => {
+                let index = await DocumentIndexModel.get(grant.src_uid, grant.oid);
+                grant.description = index.description;
+                return grant;
+            }));
+            return res.json(grants_final);
+        })
         .catch(error => next(error));
 });
 

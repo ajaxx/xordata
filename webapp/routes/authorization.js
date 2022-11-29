@@ -48,6 +48,8 @@ router.get('/', function(req, res, next) {
       redirect_uri: config.callback_url
     })
 
+    debug('handling incoming get request with code');
+
     return axios.post(request_endpoint, request_params).then(function(response) {
       let idToken = jwt.decode(response.data.id_token, { complete: true });
       let accessToken = jwt.decode(response.data.access_token);
@@ -96,6 +98,7 @@ router.get('/', function(req, res, next) {
         });
       });
     }).catch(function(error) {
+      console.log(`error`);
       console.log(`error: ${error}`);
     });
   } else {

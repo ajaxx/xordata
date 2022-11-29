@@ -4,8 +4,6 @@ const DynamoDAO = require('./base_dynamodb');
 const validation = require('./validation');
 const debug = require('debug')('xordata:model:user-profile');
 
-console.log(DynamoDAO);
-
 const defaultTableName = 'XorData-UserProfile';
 
 function itemToUserProfile(itemData) {

@@ -37,15 +37,9 @@ router.get('/:documentId', (req, res, next) => {
 });
 
 router.get('/:documentId/:owner', (req, res, next) => {
-    console.log('new handler');
-
     const req_uid = req.userProfile.uid;
     const own_uid = req.params.owner;
     const oid = req.params.documentId;
-
-    console.log(req_uid);
-    console.log(own_uid);
-    console.log(oid);
 
     if (req_uid && own_uid && oid) {
         if (req_uid == own_uid) {
@@ -63,8 +57,6 @@ router.get('/:documentId/:owner', (req, res, next) => {
                 })
                 .catch(error => next(error));
         } else {
-            console.log('starting with grant');
-
             Promise
                 .all([
                     GrantModel.get(req_uid, oid),
@@ -143,7 +135,6 @@ router.get('/access/:docId', (req, res, next) => {
 });
 
 router.post('/share', express.json(), (req, res, next) => {
-    console.log(req.body);
     const grant = {
         src_uid: req.userProfile.uid,
         dst_uid: req.body.dst_uid,
@@ -160,7 +151,6 @@ router.post('/share', express.json(), (req, res, next) => {
             .then(result => res.json(result))
             .catch(error => next(error));
     } else {
-        console.log(grant);
         res.sendStatus(400);
     }
 });

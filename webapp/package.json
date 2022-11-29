@@ -5,7 +5,8 @@
   "private": true,
   "scripts": {
     "start": "node ./bin/www",
-    "debug": "set DEBUG=* && npm start",
+    "debug": "DEBUG=* node ./bin/www",
+    "debug-win": "set DEBUG=* && npm start",
     "test": "run test"
   },
   "repository": {
@@ -29,7 +30,6 @@
     "cookie-parser": "~1.4.4",
     "debug": "~2.6.9",
     "express": "~4.16.1",
-    "formidable": "^2.0.1",
     "http-errors": "~1.6.3",
     "jade": "^1.9.2",
     "jsonwebtoken": "^8.5.1",

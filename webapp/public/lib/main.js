@@ -1052,9 +1052,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         onView(e) {
             this.decryptKeK().then(async encryptionKeyText => {
-                console.log(this.state.encryptionKeyText);
-                console.log(this.state.encryptedMessage.iv);
-
                 const cipherKey = aesjs.utils.hex.toBytes(encryptionKeyText);
                 const encryptedBytes = aesjs.utils.hex.toBytes(this.state.encryptedMessage.cipherText);
                 const iv = aesjs.utils.hex.toBytes(this.state.encryptedMessage.iv);
@@ -1207,8 +1204,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 const response = await axios.post('/api/documents/share', grant, { headers: { 'Content-Type': 'application/json' } });
 
-                console.log('grant uploaded');
-                console.log(response);
                 this.setState({ error: null });
                 window.location.href = '/documents';
             })

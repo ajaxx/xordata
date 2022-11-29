@@ -107,7 +107,6 @@ router.get('/view/:userId', function(req, res, next) {
           .get(myUserId, theirUserId)
           .then(
             relationship => {
-              console.log(relationship);
               res.render('profile_viewer', {
                 userProfile: req.userProfile,
                 viewUserProfile: viewUserProfile,

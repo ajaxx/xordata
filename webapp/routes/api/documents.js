@@ -1,9 +1,7 @@
+const e = require('express');
 const express = require('express');
 const router = express.Router();
-const formidable = require('formidable');
-const fs = require('fs');
 const debug = require('debug')('xordata:page:documents');
-const uuid = require('uuid');
 
 const controller_reindex = require('../../controllers/reindex');
 
@@ -36,6 +34,63 @@ router.get('/:documentId', (req, res, next) => {
         .get(uid, oid)
         .then(document => res.json({ document: document }))
         .catch(error => next(error));
+});
+
+router.get('/:documentId/:owner', (req, res, next) => {
+    console.log('new handler');
+
+    const req_uid = req.userProfile.uid;
+    const own_uid = req.params.owner;
+    const oid = req.params.documentId;
+
+    console.log(req_uid);
+    console.log(own_uid);
+    console.log(oid);
+
+    if (req_uid && own_uid && oid) {
+        if (req_uid == own_uid) {
+            // requesting our own file
+            DocumentIndexModel
+                .get(own_uid, oid)
+                .then(async index => {
+                    if (index) {
+                        let document = await DocumentModel.get(index.dockey);
+                        res.json({ document: document });
+                        return;
+                    }
+
+                    res.sendStatus(404);
+                })
+                .catch(error => next(error));
+        } else {
+            console.log('starting with grant');
+
+            Promise
+                .all([
+                    GrantModel.get(req_uid, oid),
+                    DocumentIndexModel.get(own_uid, oid)
+                ])
+                .then(async values => {
+                    const grant = values[0];
+                    const index = values[1];
+
+                    if (grant && index) {
+                        let document = await DocumentModel.get(index.dockey);
+                        document.description = index.description;
+                        delete document.kek;
+                        res.json({
+                            grant: grant,
+                            document: document
+                        });
+                        return;
+                    }
+
+                    res.sendStatus(404);
+                })
+                .catch(error => next(error));
+        }
+    }
+
 });
 
 // Registers a (new) document with the service

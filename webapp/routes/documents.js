@@ -35,6 +35,21 @@ router.get('/share/:docId/:dstId', (req, res, next) => {
   }
 });
 
+router.get('/view/:docId/:dstId', (req, res, next) => {
+  const srcId = req.userProfile.uid;
+  const docId = req.params.docId;
+  const dstId = req.params.dstId;
+  if (srcId && dstId && docId) {
+    res.render('document_view', {
+      documentId: docId,
+      destinationUser: dstId,
+      userProfile: req.userProfile
+    });
+  } else {
+    res.sendStatus(400);
+  }
+});
+
 router.get('/upload', (req, res) => {
   const section = req.query.section;
   if (section && sections.isSection(section)) {

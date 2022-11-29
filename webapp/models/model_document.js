@@ -41,7 +41,6 @@ const defaultBucketName = 'xordata';
         const { verified, keyID } = verificationResult.signatures[0];
         try {
             await verified; // throws on invalid signature
-            console.log('Signed by key id ' + keyID.toHex());
         } catch (e) {
             throw new Error('Signature could not be verified: ' + e.message);
         }
@@ -74,8 +73,11 @@ const defaultBucketName = 'xordata';
 
         const aesCbc = new aesjs.ModeOfOperation.cbc(key, iv);
         const encryptedBytes = aesCbc.encrypt(textBytes);
-        // Store the binary data, you may convert it to hex
-        return aesjs.utils.hex.fromBytes(encryptedBytes);
+        // convert the encrypted bytes to hex
+        const encryptedText = aesjs.utils.hex.fromBytes(encryptedBytes);
+        const ivAsText = aesjs.utils.hex.fromBytes(iv);
+
+        return { cipherText: encryptedText, iv: ivAsText };
     }
 
     async put(document) {
@@ -134,19 +136,20 @@ const defaultBucketName = 'xordata';
         };
     }
 
-    async get(uid, oid) {
-        const dockey = `${uid}/${document.section}/${oid}`;
+    async get(dockey) {
         let params = {
             Bucket: this.bucketName,
-            Prefix: prefix,
-            MaxKeys: 100,
-            ContinuationToken: continuationToken
+            Key: dockey
         }
 
         const client = await this.client();
         const command = new GetObjectCommand(params);
         const result = await client.send(command);
 
+        const dataAsText = await result.Body.transformToString();
+        const dataAsJson = JSON.parse(dataAsText);
+
+        return dataAsJson;
     }
 
     async scan(uid, section, eventEmitter) {

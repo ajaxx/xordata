@@ -1,6 +1,35 @@
-div(class='card')
-    div(class='card-header')
-        p(class='card-header-title') User Profile
-div(class='card')
-    div(class='card-header')
-        p(class='card-header-title') Inbox
+.columns.is-multiline
+    .column.is-full
+        span
+            | Welcome back&nbsp;
+        span
+            if userProfile.display_name != ''
+                | #{userProfile.display_name}
+            else
+                | #{userProfile.user}
+        span
+            | &nbsp;...
+
+    .column.is-full
+        .card 
+            .card-header 
+                .card-header-title
+                    h4.title.is-4 Quick Links
+            .card-content
+                ul.list 
+                    li.list-item 
+                        a(href='/profile')
+                            | Your Profile
+                    li.list-item 
+                        a(href='/keys')
+                            | Key(s) - technical you should only have one key
+                    li.list-item 
+                        a(href='/documents')
+                            | Documents (Yours and those shared to you)
+                    li.list-item 
+                        a(href='/connections')
+                            | Connections - people you've connected with
+            .card-footer 
+                .card-footer-item 
+                    .has-text-danger-dark
+                        | Non-Production Website

@@ -35,6 +35,16 @@ document.addEventListener('DOMContentLoaded', function () {
         return Array.prototype.slice.call(document.querySelectorAll(selector), 0);
     }
 
+    function readAsync(file) {
+        return new Promise((resolve, reject) => {
+            const fileReader = new FileReader();
+            fileReader.addEventListener('load', () => {
+                return resolve(fileReader.result);
+            });
+            fileReader.readAsText(file);
+        });
+    }
+
     // --------------------------------------------------------------------------------
     // KeyList
     // --------------------------------------------------------------------------------
@@ -590,26 +600,16 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
 
-        readAsync(file) {
-            return new Promise((resolve, reject) => {
-                const fileReader = new FileReader();
-                fileReader.addEventListener('load', () => {
-                    return resolve(fileReader.result);
-                });
-                fileReader.readAsText(file);
-            });
-        }
-
         readPrivateKey(file) {
-            return this.readAsync(file)
+            return readAsync(file)
                 .then(armoredPrivateKey => openpgp.readPrivateKey({ armoredKey: armoredPrivateKey }));
         }
 
         onSign(e) {
-            this.readAsync(this.state.filePrivateKey)
+            readAsync(this.state.filePrivateKey)
                 .then(armoredPrivateKey => openpgp.readPrivateKey({ armoredKey: armoredPrivateKey }))
                 .then(privateKey => {
-                    return this.readAsync(this.state.fileMedical)
+                    return readAsync(this.state.fileMedical)
                         .then(dataMedical => {
                             this.setState({ dataMedical : dataMedical });
                             return openpgp.createMessage({ text: dataMedical });
@@ -1018,6 +1018,148 @@ document.addEventListener('DOMContentLoaded', function () {
     }
 
     // --------------------------------------------------------------------------------
+    // DocumentViewer
+    // --------------------------------------------------------------------------------
+    class DocumentViewer extends React.Component {
+        constructor(props) {
+            super(props);
+            this.state = {
+                // grant request
+                description: null,
+                kek: null,
+                // message
+                encryptedMessage: null,
+                cleartextMessage: null,
+                // private key
+                filePrivateKey: null
+            }
+
+            this.onChangeFilePrivateKey = this.onChangeFilePrivateKey.bind(this);
+            this.onView = this.onView.bind(this);
+        }
+
+        async readPrivateKey() {
+            const armoredPrivateKey = await readAsync(this.state.filePrivateKey);
+            return await openpgp.readPrivateKey({ armoredKey: armoredPrivateKey });
+        }
+
+        async decryptKeK() {
+            const privateKey = await this.readPrivateKey();
+            const message = await openpgp.readMessage({ armoredMessage: this.state.kek });
+            const symkey = await openpgp.decrypt({ message, decryptionKeys: privateKey });
+            return symkey.data;
+        }
+
+        onView(e) {
+            this.decryptKeK().then(async encryptionKeyText => {
+                console.log(this.state.encryptionKeyText);
+                console.log(this.state.encryptedMessage.iv);
+
+                const cipherKey = aesjs.utils.hex.toBytes(encryptionKeyText);
+                const encryptedBytes = aesjs.utils.hex.toBytes(this.state.encryptedMessage.cipherText);
+                const iv = aesjs.utils.hex.toBytes(this.state.encryptedMessage.iv);
+                const aesCbc = new aesjs.ModeOfOperation.cbc(cipherKey, iv);
+                const decryptedBytes = aesCbc.decrypt(encryptedBytes);
+                const decryptedText = new TextDecoder().decode(decryptedBytes);
+                this.setState({
+                    cleartextMessage: decryptedText
+                });
+            })
+            .catch((error) => {
+                console.log(error);
+                this.setState({ error: error });
+            });
+        }
+
+        onChangeFilePrivateKey(e) {
+            this.setState({
+                filePrivateKey: e.target.files[0]
+            });
+        }
+
+        componentDidMount() {
+            fetch(`/api/documents/${this.props.documentId}/${this.props.destinationUser}`)
+                .then(async res => {
+                    let response = await res.json();
+                    let document = response.document;
+                    let grant = response.grant;
+                    this.setState({
+                        kek: grant.kek,
+                        description: document.description,
+                        encryptedMessage: document.message,
+                     });
+                }, (error) => {
+                    this.setState({ error: error });
+                });
+        }
+
+        renderButtons() {
+            const canBeViewed =
+                this.state.kek &&
+                this.state.encryptedMessage &&
+                this.state.filePrivateKey;
+
+            return React.createElement("div", { className: "field" },
+                React.createElement("button", {
+                        id: "action",
+                        className: "button is-link ml-2",
+                        disabled: !canBeViewed,
+                        onClick: this.onView
+                    },
+                    React.createElement("span", {}, "View")
+                ),
+                React.createElement("a", { className: "button is-light ml-2", href: `/documents` }, "Cancel")
+            );
+        }
+
+        render() {
+            const isCleartextHidden = this.state.cleartextMessage == null ? 'is-hidden' : '';
+
+            return React.createElement("div", { className: '' },
+                React.createElement("div", { className: "column" },
+                    React.createElement("div", { className: "field" },
+                        React.createElement("label", { className: "label" }, "File Description"),
+                        React.createElement("input", {
+                            type: "text",
+                            readOnly: true,
+                            className: "input",
+                            value: this.state.description || ''
+                        })
+                    ),
+                    React.createElement("div", { className: "field" },
+                        React.createElement("label", { className: "label" }, "Your Private Key"),
+                        React.createElement("input", {
+                            type: "file",
+                            accept: ".pem",
+                            className: "input",
+                            onChange: this.onChangeFilePrivateKey
+                        }),
+                    ),
+                    React.createElement("div", { className: `field ${isCleartextHidden}` },
+                        React.createElement("textarea", {
+                            className: "textarea",
+                            readOnly: true,
+                            rows: 15,
+                            value: this.state.cleartextMessage || ''
+                        })
+                    ),
+                    this.renderButtons()
+                )
+            );
+        }
+    }
+ 
+    const documentViewer = document.getElementById('document-viewer');
+    if (documentViewer) {
+        ReactDOM
+            .createRoot(documentViewer)
+            .render(React.createElement(DocumentViewer, {
+                documentId: documentViewer.dataset.documentId,
+                destinationUser: documentViewer.dataset.destinationUser
+            }));
+    }
+
+    // --------------------------------------------------------------------------------
     // GrantBuilder
     // --------------------------------------------------------------------------------
     class GrantBuilder extends React.Component {
@@ -1036,18 +1178,8 @@ document.addEventListener('DOMContentLoaded', function () {
             this.onSend = this.onSend.bind(this);
         }
 
-        readAsync(file) {
-            return new Promise((resolve, reject) => {
-                const fileReader = new FileReader();
-                fileReader.addEventListener('load', () => {
-                    return resolve(fileReader.result);
-                });
-                fileReader.readAsText(file);
-            });
-        }
-
         async readPrivateKey() {
-            const armoredPrivateKey = await this.readAsync(this.state.filePrivateKey);
+            const armoredPrivateKey = await readAsync(this.state.filePrivateKey);
             return await openpgp.readPrivateKey({ armoredKey: armoredPrivateKey });
         }
 
@@ -1069,8 +1201,8 @@ document.addEventListener('DOMContentLoaded', function () {
 
                 const grant = {
                     dst_uid: this.props.destinationUser,
-                    oid : this.props.documentId,
-                    kek : encryptionKeyEncrypted
+                    oid: this.props.documentId,
+                    kek: encryptionKeyEncrypted
                 }
 
                 const response = await axios.post('/api/documents/share', grant, { headers: { 'Content-Type': 'application/json' } });
@@ -1080,11 +1212,11 @@ document.addEventListener('DOMContentLoaded', function () {
                 this.setState({ error: null });
                 window.location.href = '/documents';
             })
-            .catch((error) => {
-                console.log('file upload failed');
-                console.log(error);
-                this.setState({ error: error });
-            });
+                .catch((error) => {
+                    console.log('file upload failed');
+                    console.log(error);
+                    this.setState({ error: error });
+                });
         }
 
         onChangeFilePrivateKey(e) {
@@ -1101,7 +1233,7 @@ document.addEventListener('DOMContentLoaded', function () {
                         kek: res.kek,
                         description: res.description,
                         destination: res.destination
-                     });
+                    });
                 }, (error) => {
                     this.setState({ error: error });
                 });
@@ -1116,11 +1248,11 @@ document.addEventListener('DOMContentLoaded', function () {
 
             return React.createElement("div", { className: "field" },
                 React.createElement("button", {
-                        id: "action",
-                        className: "button is-link ml-2",
-                        disabled: !canBeSent,
-                        onClick: this.onSend
-                    },
+                    id: "action",
+                    className: "button is-link ml-2",
+                    disabled: !canBeSent,
+                    onClick: this.onSend
+                },
                     React.createElement("i", { className: 'fa-solid fa-share mr-2' }),
                     React.createElement("span", {}, "Share")
                 ),
@@ -1177,14 +1309,14 @@ document.addEventListener('DOMContentLoaded', function () {
                             accept: ".pem",
                             className: "input",
                             onChange: this.onChangeFilePrivateKey
-                     })
+                        })
                     ),
                     this.renderButtons()
                 )
             );
         }
     }
- 
+
     const grantBuilder = document.getElementById('grant-builder');
     if (grantBuilder) {
         ReactDOM
